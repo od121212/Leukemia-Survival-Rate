@@ -113,6 +113,7 @@ class dtmanager:
 
 if __name__ == "__main__":
     df = pd.read_csv("./X_train/clinical_train.csv", index_col=0)
+    maf_df = pd.read_csv("./X_train/molecular_train.csv", index_col=0)
     target_df = pd.read_csv("./target_train.csv", index_col=0)
-    dtm = dtmanager(df, target_df)
-    print(dtm.plot_target_distribution())
+    dtm = dtmanager(maf_df, target_df)
+    print(dtm.stats_analysis())
