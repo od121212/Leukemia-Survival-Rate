@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from sklearn.ensemble import  RandomForestClassifier
 from sklearn.metrics import classification_report, roc_auc_score
 import logging
+from DataManagement import DataHandler
 
 
 # logging configuration
@@ -39,7 +40,7 @@ class DropMissingTransformer(BaseEstimator, TransformerMixin):
 class ModelPipeline(ABC):
 
     @abstractmethod
-    def build_pipeline(self, df_: pd.DataFrame, drop_missing_threshold=0.2) -> Pipeline:
+    def build_pipeline(self, data_handler: DataHandler, drop_missing_threshold=0.2) -> Pipeline:
         pass
 
 
@@ -52,16 +53,23 @@ class PipelineFactory:
         elif model_type == 'linear_regression':
             pass
         else:
-            raise ValueError(f"Unsupported model type: {model_type}")
+            return DefaultPipeLine()  # Return a default pipeline for unknown types
         
 
 class DefaultPipeLine(ModelPipeline):
 
-    def __init__(self, df: pd.DataFrame):
-        self.df = df
+    def __init__(self):
         super().__init__()
 
-    def build_pipeline(self):
+    def build_pipeline(self, data_handler: DataHandler, drop_missing_threshold=0.2) -> Pipeline:
+
+        # Passer DataHandler en héritage pour faciliter
+
+        # encoder = OneHotEncoder(
+        #     data_handler.categorical_cols,
+
+        # )
+
 
 # Example
         # return Pipeline([
