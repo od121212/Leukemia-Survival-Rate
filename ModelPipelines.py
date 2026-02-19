@@ -39,8 +39,11 @@ class DropMissingTransformer(BaseEstimator, TransformerMixin):
 # ========= Abstract Base Class for Model Pipelines =========
 class ModelPipeline(ABC):
 
+    def __init__(self, data_handler: DataHandler):
+        self.data_handler = data_handler
+
     @abstractmethod
-    def build_pipeline(self, drop_missing_threshold=0.2) -> Pipeline:
+    def build_pipeline(self) -> Pipeline:
         pass
 
 
@@ -53,18 +56,22 @@ class PipelineFactory:
         elif model_type == 'linear_regression':
             pass
         else:
-            return DefaultPipeLine()  # Return a default pipeline for unknown types
+            return DefaultPipeline()  # Return a default pipeline for unknown types
         
 
 
-class DefaultPipeLine(ModelPipeline, DataHandler):
+class DefaultPipeline(ModelPipeline):
 
-    def __init__(self):
-        super().__init__()
+    def build_pipeline(self) -> Pipeline:
 
-    def build_pipeline(self, data_handler: DataHandler, drop_missing_threshold=0.2) -> Pipeline:
+        self.data_handler.aggregate()
+        self.data_handler.categorize()
 
-        # Passer DataHandler en héritage pour faciliter
+        X = self.data_handler.df
+        y = self.data_handler.y
+
+        
+
 
         # encoder = OneHotEncoder(
         #     data_handler.categorical_cols,

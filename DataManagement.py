@@ -169,18 +169,25 @@ class DataViewer:
 # %%%%%%%%%%%%% DataHandler %%%%%%%%%%%%%
 class DataHandler(ABC):
 
+    def __init__(self):
+        self.df = None
+        self.y = None
+        self.categorical_cols = []
+        self.float_cols = []
+
     @abstractmethod
-    def aggregator():
+    def aggregate(self):
         pass
 
     @abstractmethod
-    def categorize():
+    def categorize(self):
         pass
 
 
 class DefaultDataHandler(DataHandler):
 
     def __init__(self, clinical_df: pd.DataFrame, molecular_df:pd.DataFrame, target:pd.DataFrame):
+        super().__init__()
         self.clinical_df = clinical_df
         self.molecular_df = molecular_df
         self.y = target
