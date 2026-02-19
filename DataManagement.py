@@ -16,6 +16,7 @@ class dtmanager:
         self.df = df
         self.y = target
         self.float_cols = self.df.select_dtypes(include=['float64']).columns
+        self.categorical_cols = self.df.select_dtypes(include=['str']).columns
     
     
     def stats_analysis(self)->pd.DataFrame:
@@ -100,14 +101,69 @@ class dtmanager:
 
         temp_df = self.df.merge(self.y[['OS_YEARS', 'OS_STATUS']], left_index=True, right_index=True)
 
-        fig, axes = plt.subplots(len(self.float_cols), 1, figsize=(10, 5 * len(self.float_cols)))
+        fig, axes = plt.subplots(len(self.df.columns), 1, figsize=(10, 5 * len(self.df.columns)))
 
-        for i, col in enumerate(self.float_cols):
+        for i, col in enumerate(self.df.columns):
+            # to many categories in CYTOGENETICS, skip for now
+            if col=="CYTOGENETICS":
+                continue
             sns.scatterplot(data=temp_df, x='OS_YEARS', y=col, hue='OS_STATUS', ax=axes[i], alpha=0.5)
             axes[i].set_title(f'{col} vs Years of Survival', fontsize=14)
 
         plt.tight_layout()
         plt.show()
+
+
+    def plot_categorical_boxplot(self, categorical_col: list = None):
+
+        temp_df = self.df.merge(
+            self.y[['OS_YEARS', 'OS_STATUS']],
+            left_index=True,
+            right_index=True
+        )
+
+        cat_cols = self.categorical_cols if categorical_col is None else categorical_col
+
+        for col in cat_cols:
+
+            # to many categories in CYTOGENETICS, skip for now
+            if col=="CYTOGENETICS":
+                continue
+
+            plt.figure(figsize=(max(12, len(temp_df[col].unique()) * 0.25), 6))
+
+            sns.boxplot(
+                data=temp_df,
+                x=col,
+                y='OS_YEARS'
+            )
+
+            plt.title(f'OS_YEARS by {col}', fontsize=14)
+            plt.xlabel(col)
+            plt.ylabel('OS_YEARS')
+
+            plt.xticks(rotation=90)
+            plt.tight_layout()
+            plt.show()
+
+
+    
+    def plot_float_boxplot(self):
+
+        temp_df = self.df.merge(self.y[['OS_YEARS', 'OS_STATUS']], left_index=True, right_index=True)
+
+        fig, axes = plt.subplots(len(self.float_cols), 1, figsize=(10, 5 * len(self.float_cols)))
+
+        for i, col in enumerate(self.float_cols):
+            # to many categories in CYTOGENETICS, skip for now
+            if col=="CYTOGENETICS":
+                continue
+            sns.boxplot(data=temp_df, x='OS_STATUS', y=col, ax=axes[i], palette='Set2')
+            axes[i].set_title(f'{col} by Survival Status', fontsize=14)
+
+        plt.tight_layout()
+        plt.show()
+
 
 
 
