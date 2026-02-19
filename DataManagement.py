@@ -163,6 +163,19 @@ class DataViewer:
 
         plt.tight_layout()
         plt.show()
+    
+    def corr_cytogenetics(self):
+        #fonction qui calcule la corrélation entre le fait d'avoir un NaN dans la CYTOGENETICS et dans les autres variables (est-ce plus probable d'avoir un NaN dans les autres variables si on a un NaN dans la CYTOGENETICS ?)
+        temp_df = self.df.copy()
+        temp_df['CYTOGENETICS_is_nan'] = temp_df['CYTOGENETICS'].isna().astype(int)  
+        corr_results = {}
+        for col in self.df.columns:
+            if col != 'CYTOGENETICS':
+                temp_df[col+'_is_nan'] = temp_df[col].isna().astype(int)
+                corr = temp_df['CYTOGENETICS_is_nan'].corr(temp_df[col+'_is_nan'])
+                corr_results[col] = corr
+        return pd.DataFrame.from_dict(corr_results, orient='index', columns=['Correlation_with_CYTOGENETICS_NaN'])
+    
 
 
 
