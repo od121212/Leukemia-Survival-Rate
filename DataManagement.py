@@ -195,6 +195,10 @@ class DefaultDataHandler(DataHandler):
         self.molecular_df = molecular_df
         self.y = target
 
+    def decode_cytogen(self):
+        # Placeholder for CYTOGENETICS decoding logic
+        pass
+
     def aggregator(self):
         # Placeholder for data aggregation logic
         mol_agg = maf_df.groupby("ID").agg(
