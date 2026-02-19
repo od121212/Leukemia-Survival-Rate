@@ -40,7 +40,7 @@ class DropMissingTransformer(BaseEstimator, TransformerMixin):
 class ModelPipeline(ABC):
 
     @abstractmethod
-    def build_pipeline(self, data_handler: DataHandler, drop_missing_threshold=0.2) -> Pipeline:
+    def build_pipeline(self, drop_missing_threshold=0.2) -> Pipeline:
         pass
 
 
@@ -55,7 +55,7 @@ class PipelineFactory:
         else:
             return DefaultPipeLine()  # Return a default pipeline for unknown types
         
-        
+
 
 class DefaultPipeLine(ModelPipeline, DataHandler):
 

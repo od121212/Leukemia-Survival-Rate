@@ -3,7 +3,7 @@ import pandas as pd
 from scipy.stats import jarque_bera
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from abc import ABC, abstractmethod
 
 # %%%%%%%%%%%%% DataViewer %%%%%%%%%%%%%
 class DataViewer:
@@ -167,7 +167,18 @@ class DataViewer:
 
 
 # %%%%%%%%%%%%% DataHandler %%%%%%%%%%%%%
-class DataHandler:
+class DataHandler(ABC):
+
+    @abstractmethod
+    def aggregator():
+        pass
+
+    @abstractmethod
+    def categorize():
+        pass
+
+
+class DefaultDataHandler(DataHandler):
 
     def __init__(self, clinical_df: pd.DataFrame, molecular_df:pd.DataFrame, target:pd.DataFrame):
         self.clinical_df = clinical_df
@@ -188,7 +199,7 @@ class DataHandler:
     def categorize(self):
         self.categorical_cols = self.df.select_dtypes(include=['object']).columns.tolist()
         self.float_cols = self.df.select_dtypes(include=['float64']).columns.tolist()
-        
+
 
 
 
