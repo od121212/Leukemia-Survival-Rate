@@ -3,7 +3,7 @@ from sklearn.tree import DecisionTreeClassifier
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
+from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -74,18 +74,42 @@ class DefaultPipeline(ModelPipeline):
         X = self.data_handler.df
         y = self.data_handler.y
 
-        
+        # Float preprocessing
+        float_pipe = Pipeline(steps=[
+            ("impute_num", SimpleImputer(strategy="median"))
+        ])
 
+        # Categorial Preprocessing
+        cat_pipe = Pipeline(steps=[
+            ("impute_cat", KNNImputer(
+                n_neighbors=5,
+                weights="distance"
+            )),
+            ('encoder', OneHotEncoder(
+                handle_unknown='ignore',
+                sparse_output=False
+            ))
+        ])
 
-        # encoder = OneHotEncoder(
-        #     data_handler.categorical_cols,
+        # columns transformer
+        col_trans = ColumnTransformer(
+            transformers=[
+                ("num", float_pipe, self.data_handler.float_cols),
+                ("cat", cat_pipe, self.data_handler.categorical_cols)
 
-        # )
+            ],
+            remainders='passthrough'
+        )
 
-
-# Example
-        # return Pipeline([
-        #     ("drop_missing", DropMissingTransformer(threshold=0.2)),
-        # ])
+        # return full Pipeline
+        return Pipeline([
+            ("drop_missing", DropMissingTransformer(threshold=0.2)),
+            ('column_transformer', col_trans),
+        ])
     
-        pass
+
+
+
+# %%%%%%%%%%%%% === MAIN TEST === %%%%%%%%%%%%%
+if __name__ == "__main__":
+    pass
