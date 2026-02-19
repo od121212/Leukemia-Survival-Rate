@@ -55,8 +55,9 @@ class PipelineFactory:
         else:
             return DefaultPipeLine()  # Return a default pipeline for unknown types
         
+        
 
-class DefaultPipeLine(ModelPipeline):
+class DefaultPipeLine(ModelPipeline, DataHandler):
 
     def __init__(self):
         super().__init__()

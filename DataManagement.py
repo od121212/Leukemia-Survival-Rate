@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
+# %%%%%%%%%%%%% DataViewer %%%%%%%%%%%%%
 class DataViewer:
 
     def __init__(
@@ -165,9 +166,10 @@ class DataViewer:
 
 
 
+# %%%%%%%%%%%%% DataHandler %%%%%%%%%%%%%
 class DataHandler:
 
-    def __init__(self, clinical_df: pd.DataFrame, molecular_df , target:pd.DataFrame):
+    def __init__(self, clinical_df: pd.DataFrame, molecular_df:pd.DataFrame, target:pd.DataFrame):
         self.clinical_df = clinical_df
         self.molecular_df = molecular_df
         self.y = target
@@ -180,19 +182,20 @@ class DataHandler:
             max_vaf=("VAF", "max"),
         )
 
-        self.df = df.join(mol_agg)
+        self.df = self.clinical_df.join(mol_agg)
         pass
 
     def categorize(self):
         self.categorical_cols = self.df.select_dtypes(include=['object']).columns.tolist()
         self.float_cols = self.df.select_dtypes(include=['float64']).columns.tolist()
+        
 
 
 
-
+# %%%%%%%%%%%%% === MAIN === %%%%%%%%%%%%%
 if __name__ == "__main__":
     df = pd.read_csv("./X_train/clinical_train.csv", index_col=0)
     maf_df = pd.read_csv("./X_train/molecular_train.csv", index_col=0)
     target_df = pd.read_csv("./target_train.csv", index_col=0)
-    dtm = DataViewer(maf_df, target_df)
+    dtm = DataViewer(df, target_df)
     print(dtm.stats_analysis())
