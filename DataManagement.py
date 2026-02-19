@@ -191,7 +191,7 @@ class DataHandler(ABC):
         self.float_cols = []
 
     @abstractmethod
-    def aggregate(self):
+    def aggregator(self):
         pass
 
     @abstractmethod
@@ -209,12 +209,40 @@ class DefaultDataHandler(DataHandler):
         self.y = target
 
     def decode_cytogen(self):
-        # Placeholder for CYTOGENETICS decoding logic
-        pass
+        
+        cyto = self.clinical_df['CYTOGENETICS']
+
+        # One hot encoding on the CYTOGENETICS column
+        cyto = (
+            cyto.str.lower()
+                .str.replace(r'\[.*?\]', '', regex=True)
+                .str.replace('onfish', '', regex=False)
+                .str.strip()
+        )
+
+        # Karyotype is fully normal
+        self.clinical_df['cyto_normal'] = cyto.str.fullmatch(r'46,(xx|xy)').astype("Int64").where(cyto.notna(), pd.NA)
+        # Karyotype has multiple structural/numerical abnormalities
+        self.clinical_df['cyto_complex'] = cyto.str.contains('complex', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+        # Loss of chromosome 7 (high risk AML/MDS)
+        self.clinical_df['monosomy_7'] = cyto.str.contains(r'-7', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+        # Extra chromosome 8 (may affect prognosis or response to therapy)
+        self.clinical_df['trisomy_8'] = cyto.str.contains(r'\+8', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+        # Deletion of a leg of 5th chromosome
+        self.clinical_df['del_5q'] = cyto.str.contains(r'del\(5', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+        # Translocation of chromosomes
+        self.clinical_df['t_3_3'] = cyto.str.contains(r't\(3;3\)', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+        # Number of abnormalities observed in the karyotype
+        self.clinical_df['n_abnormalities'] = cyto.str.count(r'del|add|dic|der|inv|t\(|\+|-').where(cyto.notna(), pd.NA)
+        # Multiple cells population
+        self.clinical_df['cyto_mosaic'] = cyto.str.contains('/', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+
+        self.clinical_df = self.clinical_df.drop('CYTOGENETICS', axis=1)
+        
 
     def aggregator(self):
         # Placeholder for data aggregation logic
-        mol_agg = maf_df.groupby("ID").agg(
+        mol_agg = self.molecular_df.groupby("ID").agg(
             nb_mutations=("GENE", "count"),
             mean_vaf=("VAF", "mean"),
             max_vaf=("VAF", "max"),
@@ -224,8 +252,30 @@ class DefaultDataHandler(DataHandler):
         pass
 
     def categorize(self):
+        # Your code
         self.categorical_cols = self.df.select_dtypes(include=['object']).columns.tolist()
         self.float_cols = self.df.select_dtypes(include=['float64']).columns.tolist()
+        #############################################################################
+        # Chat propal
+        df = self.df
+        # Step 1: object columns are categorical
+        categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+        
+        # Step 2: binary integer columns are categorical
+        int_cols = df.select_dtypes(include=['Int64', 'int64']).columns
+        for col in int_cols:
+            # treat as categorical if only 2 unique values (ignoring NaN)
+            if df[col].dropna().nunique() <= 2:
+                categorical_cols.append(col)
+        
+        # Step 3: numeric columns (float + other integers with >2 unique values)
+        numeric_cols = df.select_dtypes(include=['float64']).columns.tolist()
+        # also add int cols with >2 unique values
+        numeric_cols += [col for col in int_cols if df[col].dropna().nunique() > 2]
+        
+        # Save to object
+        self.categorical_cols = categorical_cols
+        self.float_cols = numeric_cols
 
 
 
