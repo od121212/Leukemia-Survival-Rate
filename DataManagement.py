@@ -146,7 +146,6 @@ class DataViewer:
             plt.tight_layout()
             plt.show()
 
-
     
     def plot_float_boxplot(self):
 
