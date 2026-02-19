@@ -36,7 +36,9 @@ class DropMissingTransformer(BaseEstimator, TransformerMixin):
 
 
 
-# ========= Abstract Base Class for Model Pipelines =========
+# %%%%%%%%%%%%% Pipelines Builder %%%%%%%%%%%%%
+
+# === Abstract Base Class for Pipelines ===
 class ModelPipeline(ABC):
 
     def __init__(self, data_handler: DataHandler):
@@ -45,8 +47,9 @@ class ModelPipeline(ABC):
     @abstractmethod
     def build_pipeline(self) -> Pipeline:
         pass
+#------------------------------
 
-
+#-------------- Pipeline Factory (Not Very usefull for now) ----------------
 class PipelineFactory:
 
     @staticmethod
@@ -57,6 +60,7 @@ class PipelineFactory:
             pass
         else:
             return DefaultPipeline()  # Return a default pipeline for unknown types
+#------------------------------
         
 
 

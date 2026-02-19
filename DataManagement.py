@@ -167,6 +167,8 @@ class DataViewer:
 
 
 # %%%%%%%%%%%%% DataHandler %%%%%%%%%%%%%
+
+# === Abstract Base Class for Data Handling ===
 class DataHandler(ABC):
 
     def __init__(self):
@@ -182,6 +184,7 @@ class DataHandler(ABC):
     @abstractmethod
     def categorize(self):
         pass
+#------------------------------
 
 
 class DefaultDataHandler(DataHandler):
