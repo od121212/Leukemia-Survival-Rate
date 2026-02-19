@@ -165,7 +165,7 @@ class DataViewer:
 
 
 
-class DataHanlder:
+class DataHandler:
 
     def __init__(self, clinical_df: pd.DataFrame, molecular_df , target:pd.DataFrame):
         self.clinical_df = clinical_df
