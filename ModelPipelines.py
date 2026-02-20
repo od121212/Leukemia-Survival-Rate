@@ -14,6 +14,7 @@ from sklearn.ensemble import  RandomForestClassifier
 from sklearn.metrics import classification_report, roc_auc_score
 import logging
 from DataManagement import DataHandler
+from sksurv.ensemble import RandomSurvivalForest
 
 
 # logging configuration
@@ -68,7 +69,7 @@ class DefaultPipeline(ModelPipeline):
 
     def build_pipeline(self) -> Pipeline:
 
-        self.data_handler.aggregate()
+        self.data_handler.aggregator()
         self.data_handler.categorize()
 
         X = self.data_handler.df
@@ -97,10 +98,6 @@ class DefaultPipeline(ModelPipeline):
                 n_neighbors=5,
                 weights="distance"
             )),
-            ('encoder', OneHotEncoder(
-                handle_unknown='ignore',
-                sparse_output=False
-            ))
         ])
 
         # columns transformer
@@ -113,10 +110,23 @@ class DefaultPipeline(ModelPipeline):
             remainders='passthrough'
         )
 
+        # === MODEL ===
+
+        model = RandomSurvivalForest(
+            n_estimators=100,
+            min_samples_split=10,
+            min_samples_leaf=15,
+            max_features="sqrt",
+            n_jobs=-1,
+            random_state=42
+        )
+
+
         # return full Pipeline
         return Pipeline([
             ("drop_missing", DropMissingTransformer(threshold=0.2)),
             ('column_transformer', col_trans),
+            ('model', model)
         ])
     
 
