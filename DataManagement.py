@@ -191,6 +191,7 @@ class DataHandler(ABC):
         self.y = None
         self.categorical_cols = []
         self.float_cols = []
+        self.binary_cols= []
 
     @abstractmethod
     def aggregator(self):
@@ -256,30 +257,10 @@ class DefaultDataHandler(DataHandler):
     def categorize(self):
         
         self.categorical_cols = self.df.select_dtypes(include=['object']).columns.tolist()
+        self.binary_cols= cyto_cols = ['cyto_normal', 'cyto_complex', 'monosomy_7', 
+    'trisomy_8', 'del_5q', 't_3_3', 'cyto_mosaic']
         self.float_cols = self.df.select_dtypes(include=['float64']).columns.tolist()
-        #############################################################################
-        # Chat propal
-        df = self.df
-        # Step 1: object columns are categorical
-        categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
         
-        # Step 2: binary integer columns are categorical
-        int_cols = df.select_dtypes(include=['Int64', 'int64']).columns
-        for col in int_cols:
-            # treat as categorical if only 2 unique values (ignoring NaN)
-            if df[col].dropna().nunique() <= 2:
-                categorical_cols.append(col)
-        
-        # Step 3: numeric columns (float + other integers with >2 unique values)
-        numeric_cols = df.select_dtypes(include=['float64']).columns.tolist()
-        # also add int cols with >2 unique values
-        numeric_cols += [col for col in int_cols if df[col].dropna().nunique() > 2]
-        
-        # Save to object
-        self.categorical_cols = categorical_cols
-        self.float_cols = numeric_cols
-        self.binary_categorical_cols = None
-
 
 
 
