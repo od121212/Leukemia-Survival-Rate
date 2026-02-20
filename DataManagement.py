@@ -211,6 +211,7 @@ class DefaultDataHandler(DataHandler):
         self.molecular_df = molecular_df
         self.y = target
 
+
     def decode_cytogen(self):
         
         cyto = self.clinical_df['CYTOGENETICS']
@@ -260,7 +261,26 @@ class DefaultDataHandler(DataHandler):
         self.binary_cols= cyto_cols = ['cyto_normal', 'cyto_complex', 'monosomy_7', 
     'trisomy_8', 'del_5q', 't_3_3', 'cyto_mosaic']
         self.float_cols = self.df.select_dtypes(include=['float64']).columns.tolist()
-        
+
+    
+    def drop_nan_target(self):
+        """
+        Drop rows where target contains NaN.
+        Ensures perfect alignment between X and y.
+        """
+
+        valid_idx = self.y.dropna().index
+
+        self.y = self.y.loc[valid_idx]
+
+        if self.df is not None:
+            self.df = self.df.loc[valid_idx]
+        self.clinical_df = self.clinical_df.loc[valid_idx]
+
+        if self.molecular_df is not None:
+            self.molecular_df = self.molecular_df.loc[
+                self.molecular_df.index.intersection(valid_idx)
+            ]
 
 
 

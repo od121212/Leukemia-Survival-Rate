@@ -13,8 +13,9 @@ from abc import ABC, abstractmethod
 from sklearn.ensemble import  RandomForestClassifier
 from sklearn.metrics import classification_report, roc_auc_score
 import logging
-from DataManagement import DataHandler
+from DataManagement import DataHandler, DefaultDataHandler
 from sksurv.ensemble import RandomSurvivalForest
+from sksurv.util import Surv
 
 
 # logging configuration
@@ -69,8 +70,10 @@ class DefaultPipeline(ModelPipeline):
 
     def build_pipeline(self) -> Pipeline:
 
+        self.data_handler.decode_cytogen()
         self.data_handler.aggregator()
         self.data_handler.categorize()
+        self.data_handler.drop_nan_target()
 
         X = self.data_handler.df
         y = self.data_handler.y
@@ -82,14 +85,15 @@ class DefaultPipeline(ModelPipeline):
 
         # Categorial Preprocessing
         multi_cat_pipe = Pipeline(steps=[
+            ('encoder', OneHotEncoder(
+                handle_unknown='ignore',
+                sparse_output=False
+            )),
+
             ("impute_cat", KNNImputer(
                 n_neighbors=5,
                 weights="distance"
             )),
-            ('encoder', OneHotEncoder(
-                handle_unknown='ignore',
-                sparse_output=False
-            ))
         ])
 
         # binary categorical preprocessing
@@ -105,9 +109,9 @@ class DefaultPipeline(ModelPipeline):
             transformers=[
                 ("num", float_pipe, self.data_handler.float_cols),
                 ("cat", multi_cat_pipe, self.data_handler.categorical_cols),
-                ("binary_cat", binary_pipe, self.data_handler.binary_categorical_cols)
+                ("binary_cat", binary_pipe, self.data_handler.binary_cols)
             ],
-            remainders='passthrough'
+            remainder='passthrough'
         )
 
         # === MODEL ===
@@ -134,4 +138,26 @@ class DefaultPipeline(ModelPipeline):
 
 # %%%%%%%%%%%%% === MAIN TEST === %%%%%%%%%%%%%
 if __name__ == "__main__":
-    pass
+
+    # Load data
+    df = pd.read_csv("./X_train/clinical_train.csv", index_col=0)
+    maf_df = pd.read_csv("./X_train/molecular_train.csv", index_col=0)
+    target_df = pd.read_csv("./target_train.csv", index_col=0)
+
+    # Build and fit pipeline
+    data_handler = DefaultDataHandler(df, maf_df, target_df)
+    pipeline_builder = DefaultPipeline(data_handler)
+    pipeline = pipeline_builder.build_pipeline()
+
+    y_surv = Surv.from_dataframe(
+        event='OS_STATUS',   # 1 = event, 0 = censored
+        time='OS_YEARS',
+        data=data_handler.y
+    )
+
+    pipeline.fit(data_handler.df, y_surv)
+
+    transformed_data = pipeline[:-1].transform(data_handler.df)
+    print(transformed_data.shape)
+    
+
