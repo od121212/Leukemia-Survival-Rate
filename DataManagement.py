@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from abc import ABC, abstractmethod
 
+
 # %%%%%%%%%%%%% DataViewer %%%%%%%%%%%%%
 class DataViewer:
 
@@ -163,6 +164,7 @@ class DataViewer:
 
         plt.tight_layout()
         plt.show()
+
     
     def corr_cytogenetics(self):
         #fonction qui calcule la corrélation entre le fait d'avoir un NaN dans la CYTOGENETICS et dans les autres variables (est-ce plus probable d'avoir un NaN dans les autres variables si on a un NaN dans la CYTOGENETICS ?)
@@ -241,7 +243,7 @@ class DefaultDataHandler(DataHandler):
         
 
     def aggregator(self):
-        # Placeholder for data aggregation logic
+        
         mol_agg = self.molecular_df.groupby("ID").agg(
             nb_mutations=("GENE", "count"),
             mean_vaf=("VAF", "mean"),
@@ -249,10 +251,10 @@ class DefaultDataHandler(DataHandler):
         )
 
         self.df = self.clinical_df.join(mol_agg)
-        pass
+        
 
     def categorize(self):
-        # Your code
+        
         self.categorical_cols = self.df.select_dtypes(include=['object']).columns.tolist()
         self.float_cols = self.df.select_dtypes(include=['float64']).columns.tolist()
         #############################################################################
@@ -276,6 +278,7 @@ class DefaultDataHandler(DataHandler):
         # Save to object
         self.categorical_cols = categorical_cols
         self.float_cols = numeric_cols
+        self.binary_categorical_cols = None
 
 
 

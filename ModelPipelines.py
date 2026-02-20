@@ -80,7 +80,19 @@ class DefaultPipeline(ModelPipeline):
         ])
 
         # Categorial Preprocessing
-        cat_pipe = Pipeline(steps=[
+        multi_cat_pipe = Pipeline(steps=[
+            ("impute_cat", KNNImputer(
+                n_neighbors=5,
+                weights="distance"
+            )),
+            ('encoder', OneHotEncoder(
+                handle_unknown='ignore',
+                sparse_output=False
+            ))
+        ])
+
+        # binary categorical preprocessing
+        binary_pipe = Pipeline(steps=[
             ("impute_cat", KNNImputer(
                 n_neighbors=5,
                 weights="distance"
@@ -95,8 +107,8 @@ class DefaultPipeline(ModelPipeline):
         col_trans = ColumnTransformer(
             transformers=[
                 ("num", float_pipe, self.data_handler.float_cols),
-                ("cat", cat_pipe, self.data_handler.categorical_cols)
-
+                ("cat", multi_cat_pipe, self.data_handler.categorical_cols),
+                ("binary_cat", binary_pipe, self.data_handler.binary_categorical_cols)
             ],
             remainders='passthrough'
         )
