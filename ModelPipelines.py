@@ -117,12 +117,10 @@ class DefaultPipeline(ModelPipeline):
         # === MODEL ===
 
         model = RandomSurvivalForest(
-            n_estimators=100,
-            min_samples_split=10,
-            min_samples_leaf=15,
-            max_features="sqrt",
             n_jobs=-1,
-            random_state=42
+            random_state=42,
+            bootstrap=True,
+            oob_score=False
         )
 
 
