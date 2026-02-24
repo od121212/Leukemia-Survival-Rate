@@ -5,7 +5,11 @@ from ModelPipelines import DefaultPipeline
 from sksurv.util import Surv
 from config import PARAMS_RSF
 from sksurv.metrics import concordance_index_censored
+import logging
 
+
+# logging configuration
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 class ModelSelection:
@@ -25,21 +29,27 @@ class ModelSelection:
         self.grid = None
         self.best_model = None
 
+        logging.info("Initialized ModelSelection with model: %s, cv: %d, n_jobs: %d",
+                     model.__class__.__name__, cv, n_jobs)
+
+
     def cindex_scorer(self, estimator, X, y):
         pred = estimator.predict(X)
-        return concordance_index_censored(
-            y["OS_STATUS"],
-            y["OS_YEARS"],
-            pred
-        )[0]
-        
+        event, time = y[y.dtype.names[0]], y[y.dtype.names[1]]
+        return concordance_index_censored(event, time, pred)[0]
+
+
     def fit(self, X, y):
+
+        logging.info("Starting Grid Search with %d combinations", len(self.param_grid))
+
         self.grid = GridSearchCV(
             estimator=self.model,
             param_grid=self.param_grid,
             cv=self.cv,
             scoring=self.cindex_scorer,
-            n_jobs=self.n_jobs
+            n_jobs=self.n_jobs,
+            verbose=2
         )
         
         self.grid.fit(X, y)
