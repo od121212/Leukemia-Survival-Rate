@@ -200,6 +200,14 @@ class DataHandler(ABC):
     @abstractmethod
     def categorize(self):
         pass
+
+    @abstractmethod
+    def decode_cytogen(self):
+        pass
+
+    @abstractmethod
+    def prepare(self):
+        pass
 #------------------------------
 
 
@@ -213,54 +221,21 @@ class DefaultDataHandler(DataHandler):
 
 
     def decode_cytogen(self):
-        
-        cyto = self.clinical_df['CYTOGENETICS']
-
-        # One hot encoding on the CYTOGENETICS column
-        cyto = (
-            cyto.str.lower()
-                .str.replace(r'\[.*?\]', '', regex=True)
-                .str.replace('onfish', '', regex=False)
-                .str.strip()
-        )
-
-        # Karyotype is fully normal
-        self.clinical_df['cyto_normal'] = cyto.str.fullmatch(r'46,(xx|xy)').astype("Int64").where(cyto.notna(), pd.NA)
-        # Karyotype has multiple structural/numerical abnormalities
-        self.clinical_df['cyto_complex'] = cyto.str.contains('complex', na=False).astype("Int64").where(cyto.notna(), pd.NA)
-        # Loss of chromosome 7 (high risk AML/MDS)
-        self.clinical_df['monosomy_7'] = cyto.str.contains(r'-7', na=False).astype("Int64").where(cyto.notna(), pd.NA)
-        # Extra chromosome 8 (may affect prognosis or response to therapy)
-        self.clinical_df['trisomy_8'] = cyto.str.contains(r'\+8', na=False).astype("Int64").where(cyto.notna(), pd.NA)
-        # Deletion of a leg of 5th chromosome
-        self.clinical_df['del_5q'] = cyto.str.contains(r'del\(5', na=False).astype("Int64").where(cyto.notna(), pd.NA)
-        # Translocation of chromosomes
-        self.clinical_df['t_3_3'] = cyto.str.contains(r't\(3;3\)', na=False).astype("Int64").where(cyto.notna(), pd.NA)
-        # Number of abnormalities observed in the karyotype
-        self.clinical_df['n_abnormalities'] = cyto.str.count(r'del|add|dic|der|inv|t\(|\+|-').where(cyto.notna(), pd.NA)
-        # Multiple cells population
-        self.clinical_df['cyto_mosaic'] = cyto.str.contains('/', na=False).astype("Int64").where(cyto.notna(), pd.NA)
-
-        self.clinical_df = self.clinical_df.drop('CYTOGENETICS', axis=1)
+        # Backwards-compatible mutating wrapper: operate on internal clinical_df
+        self.clinical_df = self._decode_cytogen(self.clinical_df)
         
 
     def aggregator(self):
-        
-        mol_agg = self.molecular_df.groupby("ID").agg(
-            nb_mutations=("GENE", "count"),
-            mean_vaf=("VAF", "mean"),
-            max_vaf=("VAF", "max"),
-        )
-
-        self.df = self.clinical_df.join(mol_agg)
+        # Backwards-compatible mutating wrapper: operate on internal dfs
+        self.df = self._aggregator(self.clinical_df, self.molecular_df)
         
 
     def categorize(self):
-        
-        self.categorical_cols = self.df.select_dtypes(include=['object']).columns.tolist()
-        self.binary_cols= cyto_cols = ['cyto_normal', 'cyto_complex', 'monosomy_7', 
-    'trisomy_8', 'del_5q', 't_3_3', 'cyto_mosaic']
-        self.float_cols = self.df.select_dtypes(include=['float64']).columns.tolist()
+        # Backwards-compatible mutating wrapper: set attributes based on current df
+        cat, bin_cols, flt = self._categorize(self.df)
+        self.categorical_cols = cat
+        self.binary_cols = bin_cols
+        self.float_cols = flt
 
     
     def drop_nan_target(self):
@@ -268,19 +243,99 @@ class DefaultDataHandler(DataHandler):
         Drop rows where target contains NaN.
         Ensures perfect alignment between X and y.
         """
+        # Backwards-compatible mutating wrapper: filter internal dfs
+        df, y, molecular = self._drop_nan_target(self.df, self.y, self.molecular_df)
+        self.df = df
+        self.y = y
+        self.molecular_df = molecular
 
-        valid_idx = self.y.dropna().index
+    def prepare(self)->tuple[pd.DataFrame, pd.DataFrame, list, list, list]:
+        """
+        Prepare and return cleaned copies without mutating the handler's internal state.
 
-        self.y = self.y.loc[valid_idx]
+        Returns: (df, y, float_cols, categorical_cols, binary_cols)
+        """
+        clinical = self.clinical_df.copy()
+        molecular = self.molecular_df.copy() if self.molecular_df is not None else None
+        y = self.y.copy() if self.y is not None else None
 
-        if self.df is not None:
-            self.df = self.df.loc[valid_idx]
-        self.clinical_df = self.clinical_df.loc[valid_idx]
+        clinical = self._decode_cytogen(clinical)
+        df = self._aggregator(clinical, molecular)
+        cat_cols, bin_cols, flt_cols = self._categorize(df)
+        df, y, molecular = self._drop_nan_target(df, y, molecular)
 
-        if self.molecular_df is not None:
-            self.molecular_df = self.molecular_df.loc[
-                self.molecular_df.index.intersection(valid_idx)
-            ]
+        return (df, y, flt_cols, cat_cols, bin_cols)
+
+    # ----- Private helpers on DataFrame copies -----
+    def _decode_cytogen(self, clinical_df: pd.DataFrame) -> pd.DataFrame:
+        cyto = clinical_df['CYTOGENETICS']
+
+        cyto = (
+            cyto.str.lower()
+                .str.replace(r'\[.*?\]', '', regex=True)
+                .str.replace('onfish', '', regex=False)
+                .str.strip()
+        )
+
+        clinical_df['cyto_normal'] = cyto.str.fullmatch(r'46,(xx|xy)').astype("Int64").where(cyto.notna(), pd.NA)
+        clinical_df['cyto_complex'] = cyto.str.contains('complex', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+        clinical_df['monosomy_7'] = cyto.str.contains(r'-7', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+        clinical_df['trisomy_8'] = cyto.str.contains(r'\+8', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+        clinical_df['del_5q'] = cyto.str.contains(r'del\(5', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+        clinical_df['t_3_3'] = cyto.str.contains(r't\(3;3\)', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+        clinical_df['n_abnormalities'] = cyto.str.count(r'del|add|dic|der|inv|t\(|\+|-').where(cyto.notna(), pd.NA)
+        clinical_df['cyto_mosaic'] = cyto.str.contains('/', na=False).astype("Int64").where(cyto.notna(), pd.NA)
+
+        clinical_df = clinical_df.drop('CYTOGENETICS', axis=1)
+        return clinical_df
+
+    def _aggregator(self, clinical_df: pd.DataFrame, molecular_df: pd.DataFrame) -> pd.DataFrame:
+        if molecular_df is None:
+            return clinical_df.copy()
+
+        mol_agg = molecular_df.groupby("ID").agg(
+            nb_mutations=("GENE", "count"),
+            mean_vaf=("VAF", "mean"),
+            max_vaf=("VAF", "max"),
+        )
+
+        # Ensure join is explicit on index
+        if clinical_df.index.dtype == mol_agg.index.dtype or 'ID' in clinical_df.columns:
+            # try to join on index; if IDs are a column, prefer merge
+            try:
+                joined = clinical_df.join(mol_agg)
+            except Exception:
+                joined = clinical_df.reset_index().merge(mol_agg.reset_index(), left_on='ID', right_on='ID', how='left').set_index(clinical_df.index.name)
+        else:
+            joined = clinical_df.join(mol_agg)
+
+        return joined
+
+    def _categorize(self, df: pd.DataFrame):
+        categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+        binary_cols = ['cyto_normal', 'cyto_complex', 'monosomy_7', 'trisomy_8', 'del_5q', 't_3_3', 'cyto_mosaic']
+        float_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        return categorical_cols, binary_cols, float_cols
+
+    def _drop_nan_target(self, df: pd.DataFrame, y: pd.DataFrame, molecular_df: pd.DataFrame):
+        if y is None:
+            return df, y, molecular_df
+
+        valid_idx = y.dropna().index
+        y_filtered = y.loc[valid_idx]
+
+        df_filtered = df.loc[valid_idx] if df is not None else None
+        clinical_filtered = None
+        molecular_filtered = None
+
+        if molecular_df is not None:
+            # molecular_df often contains rows per mutation; filter by ID column if present
+            if 'ID' in molecular_df.columns:
+                molecular_filtered = molecular_df[molecular_df['ID'].isin(valid_idx)].copy()
+            else:
+                molecular_filtered = molecular_df.loc[molecular_df.index.intersection(valid_idx)]
+
+        return df_filtered, y_filtered, molecular_filtered
 
 
 

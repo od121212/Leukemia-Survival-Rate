@@ -76,17 +76,20 @@ if __name__ == "__main__":
 
     # Build and fit pipeline
     data_handler = DefaultDataHandler(df, maf_df, target_df)
-    pipeline_builder = DefaultPipeline(data_handler)
+    prepared_data = data_handler.prepare()
+    pipeline_builder = DefaultPipeline(prepared_data)
     pipeline = pipeline_builder.build_pipeline()
+
+
 
     y_surv = Surv.from_dataframe(
         event='OS_STATUS',   # 1 = event, 0 = censored
         time='OS_YEARS',
-        data=data_handler.y
+        data=prepared_data[1]
     )
 
     grid_search = ModelSelection(model=pipeline, param_grid=PARAMS_RSF, cv=5)
-    grid_search.fit(data_handler.df, y_surv)
+    grid_search.fit(prepared_data[0], y_surv)
     print("Best Parameters:", grid_search.best_params())
     print("Best Score:", grid_search.best_score())
 

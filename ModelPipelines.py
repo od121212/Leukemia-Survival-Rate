@@ -43,8 +43,8 @@ class DropMissingTransformer(BaseEstimator, TransformerMixin):
 # === Abstract Base Class for Pipelines ===
 class ModelPipeline(ABC):
 
-    def __init__(self, data_handler: DataHandler):
-        self.data_handler = data_handler
+    def __init__(self, *args):
+        pass
 
     @abstractmethod
     def build_pipeline(self) -> Pipeline:
@@ -68,15 +68,18 @@ class PipelineFactory:
 
 class DefaultPipeline(ModelPipeline):
 
+    def __init__(
+            self, 
+            prep_:tuple[pd.DataFrame, pd.DataFrame, list, list, list], 
+            *args
+            ):
+        super().__init__(*args)
+        self.prepared_data = prep_
+
     def build_pipeline(self) -> Pipeline:
 
-        self.data_handler.decode_cytogen()
-        self.data_handler.aggregator()
-        self.data_handler.categorize()
-        self.data_handler.drop_nan_target()
-
-        X = self.data_handler.df
-        y = self.data_handler.y
+        # return prepared data set copies (non-mutating)
+        X, y, float_cols, categorical_cols, binary_cols = self.prepared_data
 
         # Float preprocessing
         float_pipe = Pipeline(steps=[
@@ -107,9 +110,9 @@ class DefaultPipeline(ModelPipeline):
         # columns transformer
         col_trans = ColumnTransformer(
             transformers=[
-                ("num", float_pipe, self.data_handler.float_cols),
-                ("cat", multi_cat_pipe, self.data_handler.categorical_cols),
-                ("binary_cat", binary_pipe, self.data_handler.binary_cols)
+                ("num", float_pipe, float_cols),
+                ("cat", multi_cat_pipe, categorical_cols),
+                ("binary_cat", binary_pipe, binary_cols)
             ],
             remainder='passthrough'
         )
@@ -144,18 +147,20 @@ if __name__ == "__main__":
 
     # Build and fit pipeline
     data_handler = DefaultDataHandler(df, maf_df, target_df)
-    pipeline_builder = DefaultPipeline(data_handler)
+    prepared_data = data_handler.prepare()
+    pipeline_builder = DefaultPipeline(prepared_data)
     pipeline = pipeline_builder.build_pipeline()
+
 
     y_surv = Surv.from_dataframe(
         event='OS_STATUS',   # 1 = event, 0 = censored
         time='OS_YEARS',
-        data=data_handler.y
+        data=prepared_data[1]
     )
 
-    pipeline.fit(data_handler.df, y_surv)
+    pipeline.fit(prepared_data[0], y_surv)
 
-    transformed_data = pipeline[:-1].transform(data_handler.df)
+    transformed_data = pipeline[:-1].transform(prepared_data[0])
     print(transformed_data.shape)
     
 
