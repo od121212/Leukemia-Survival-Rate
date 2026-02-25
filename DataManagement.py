@@ -211,6 +211,7 @@ class DataHandler(ABC):
 #------------------------------
 
 
+# === Building a Default Data Handler ===
 class DefaultDataHandler(DataHandler):
 
     def __init__(self, clinical_df: pd.DataFrame, molecular_df:pd.DataFrame, target:pd.DataFrame):
@@ -336,6 +337,49 @@ class DefaultDataHandler(DataHandler):
                 molecular_filtered = molecular_df.loc[molecular_df.index.intersection(valid_idx)]
 
         return df_filtered, y_filtered, molecular_filtered
+
+
+# === Building a Imporved Data Handler - with slitghtly different aggregator ===
+class ImprovedDataHandler(DataHandler):
+
+    def __init__(self, clinical_df: pd.DataFrame, molecular_df:pd.DataFrame, target:pd.DataFrame):
+        super().__init__()
+        self.clinical_df = clinical_df
+        self.molecular_df = molecular_df
+        self.y = target
+
+
+    def decode_cytogen(self):
+        pass
+        
+
+    def aggregator(self):
+        pass
+        
+
+    def categorize(self):
+        pass
+
+    
+    def drop_nan_target(self):
+        pass
+
+    def prepare(self)->tuple[pd.DataFrame, pd.DataFrame, list, list, list]:
+        pass
+
+    # ----- Private helpers on DataFrame copies -----
+    def _decode_cytogen(self, clinical_df: pd.DataFrame) -> pd.DataFrame:
+        pass
+
+    def _aggregator(self, clinical_df: pd.DataFrame, molecular_df: pd.DataFrame) -> pd.DataFrame:
+        pass
+
+    def _categorize(self, df: pd.DataFrame):
+        pass
+
+    def _drop_nan_target(self, df: pd.DataFrame, y: pd.DataFrame, molecular_df: pd.DataFrame):
+        pass
+
 
 
 
