@@ -386,6 +386,7 @@ class ImprovedDataHandler(DataHandler):
         y = self.y.copy() if self.y is not None else None
 
         clinical = self._decode_cytogen(clinical)
+        molecular = self._decode_chromosomes(molecular)
         df = self._aggregator(clinical, molecular)
         cat_cols, bin_cols, flt_cols = self._categorize(df)
         df, y, molecular = self._drop_nan_target(df, y, molecular)
@@ -416,36 +417,47 @@ class ImprovedDataHandler(DataHandler):
         return clinical_df
 
     def _decode_chromosomes(self,molecular_df:pd.DataFrame) -> pd.DataFrame:
-        columns=[f"column_{i}" for i in range(1,22)]
-        columns.append("X")
+
+        mol_agg_gen = molecular_df.groupby("ID").agg(nb_mutations=("GENE", "count"))
         
+        ID = molecular_df.index.tolist()
+        CH=list(molecular_df["CHR"])
+        VAF=list(molecular_df["VAF"])
+
+        df_chrom=pd.DataFrame({
+            "ID":ID,
+            "Chromosomes":CH,
+            "VAF":VAF,
+        })
+
+        result=df_chrom.pivot_table(index="ID", columns="Chromosomes",values="VAF",fill_value=0).reset_index()
+
+        molecular_df=result.merge(mol_agg_gen,on="ID",how="inner")
+        molecular_df = molecular_df.set_index("ID")
+
         return molecular_df
     
     def _aggregator(self, clinical_df: pd.DataFrame, molecular_df: pd.DataFrame) -> pd.DataFrame:
         if molecular_df is None:
             return clinical_df.copy()
-
-        mol_agg = molecular_df.groupby("ID").agg(
-            nb_mutations=("GENE", "count"),
-            mean_vaf=("VAF", "mean"),
-            max_vaf=("VAF", "max"),
-        )
-
+        
         # Ensure join is explicit on index
-        if clinical_df.index.dtype == mol_agg.index.dtype or 'ID' in clinical_df.columns:
+        if clinical_df.index.dtype == molecular_df.index.dtype or 'ID' in clinical_df.columns:
             # try to join on index; if IDs are a column, prefer merge
             try:
-                joined = clinical_df.join(mol_agg)
+                joined = clinical_df.join(molecular_df)
             except Exception:
-                joined = clinical_df.reset_index().merge(mol_agg.reset_index(), left_on='ID', right_on='ID', how='left').set_index(clinical_df.index.name)
+                joined = clinical_df.reset_index().merge(molecular_df.reset_index(), left_on='ID', right_on='ID', how='left').set_index(clinical_df.index.name)
         else:
-            joined = clinical_df.join(mol_agg)
+            joined = clinical_df.join(molecular_df)
 
         return joined
 
     def _categorize(self, df: pd.DataFrame):
         categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-        binary_cols = ['cyto_normal', 'cyto_complex', 'monosomy_7', 'trisomy_8', 'del_5q', 't_3_3', 'cyto_mosaic']
+        columns=[f"{i}" for i in range(1,22)]
+        columns.append("X")
+        binary_cols = ['cyto_normal', 'cyto_complex', 'monosomy_7', 'trisomy_8', 'del_5q', 't_3_3', 'cyto_mosaic']+columns
         float_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         return categorical_cols, binary_cols, float_cols
 
@@ -468,6 +480,7 @@ class ImprovedDataHandler(DataHandler):
                 molecular_filtered = molecular_df.loc[molecular_df.index.intersection(valid_idx)]
 
         return df_filtered, y_filtered, molecular_filtered
+    
 
 
 
