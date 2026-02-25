@@ -455,9 +455,7 @@ class ImprovedDataHandler(DataHandler):
 
     def _categorize(self, df: pd.DataFrame):
         categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-        columns=[f"{i}" for i in range(1,22)]
-        columns.append("X")
-        binary_cols = ['cyto_normal', 'cyto_complex', 'monosomy_7', 'trisomy_8', 'del_5q', 't_3_3', 'cyto_mosaic']+columns
+        binary_cols = ['cyto_normal', 'cyto_complex', 'monosomy_7', 'trisomy_8', 'del_5q', 't_3_3', 'cyto_mosaic']
         float_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         return categorical_cols, binary_cols, float_cols
 
