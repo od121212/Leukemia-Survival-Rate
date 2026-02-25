@@ -6,6 +6,8 @@ from sksurv.util import Surv
 from config import PARAMS_RSF
 from sksurv.metrics import concordance_index_censored
 import logging
+import os
+import numpy as np
 
 
 # logging configuration
@@ -57,15 +59,43 @@ class ModelSelection:
         
         return self
     
+
     def best_params(self):
         return self.grid.best_params_
+    
     
     def best_score(self):
         return self.grid.best_score_
     
+
     def predict(self, X):
         return self.best_model.predict(X)
 
+
+    def save_submission(self, X_test, out_path="submission_from_gridsearch.csv", ids=None):
+
+        if self.best_model is None:
+            raise RuntimeError("No fitted best_model available. Run fit() first.")
+
+        raw_preds = self.predict(X_test)
+
+        p_min = raw_preds.min()
+        p_max = raw_preds.max()
+        risk_scores = (raw_preds - p_min) / (p_max - p_min)
+
+        if ids is None:
+            try:
+                ids = X_test.index
+            except Exception:
+                ids = range(len(risk_scores))
+
+        sub_df = pd.DataFrame({
+            "ID": ids, 
+            "risk_score": risk_scores
+        })
+        
+        sub_df.to_csv(out_path, index=False)
+        logging.info(f"Submission sauvegardée : {out_path}")
 
 
 if __name__ == "__main__":
@@ -79,8 +109,8 @@ if __name__ == "__main__":
     prepared_data = data_handler.prepare()
     pipeline_builder = DefaultPipeline(prepared_data)
     pipeline = pipeline_builder.build_pipeline()
-
-
+    # Save training columns to align test set
+    train_cols = prepared_data[0].columns.tolist()
 
     y_surv = Surv.from_dataframe(
         event='OS_STATUS',   # 1 = event, 0 = censored
@@ -92,4 +122,22 @@ if __name__ == "__main__":
     grid_search.fit(prepared_data[0], y_surv)
     print("Best Parameters:", grid_search.best_params())
     print("Best Score:", grid_search.best_score())
+
+    # --- Generate submission on test set (align columns with training) ---
+    clin_test = pd.read_csv("./X_test/clinical_test.csv", index_col=0)
+    try:
+        maf_test = pd.read_csv("./X_test/molecular_test.csv", index_col=0)
+    except FileNotFoundError:
+        maf_test = None
+
+    test_handler = DefaultDataHandler(clin_test, maf_test, None)
+    test_prepared = test_handler.prepare()
+    X_test_prepared = test_prepared[0]
+
+    # align test columns to training columns (adds missing columns as NaN, drops extras)
+    X_test_aligned = X_test_prepared.reindex(columns=train_cols)
+
+    out_file = os.path.join(os.getcwd(), "submission_from_gridsearch.csv")
+    grid_search.save_submission(X_test_aligned, out_path=out_file)
+    print(f"Saved submission to {out_file}")
 
