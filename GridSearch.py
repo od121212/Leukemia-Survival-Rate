@@ -1,6 +1,6 @@
 from sklearn.model_selection import GridSearchCV
 import pandas as pd
-from DataManagement import DataHandler, DefaultDataHandler
+from DataManagement import DataHandler, DefaultDataHandler, ImprovedDataHandler
 from ModelPipelines import DefaultPipeline
 from sksurv.util import Surv
 from config import PARAMS_RSF
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     target_df = pd.read_csv("./target_train.csv", index_col=0)
 
     # Build and fit pipeline
-    data_handler = DefaultDataHandler(df, maf_df, target_df)
+    data_handler = ImprovedDataHandler(df, maf_df, target_df)
     prepared_data = data_handler.prepare()
     pipeline_builder = DefaultPipeline(prepared_data)
     pipeline = pipeline_builder.build_pipeline()
