@@ -386,7 +386,7 @@ class ImprovedDataHandler(DataHandler):
         y = self.y.copy() if self.y is not None else None
 
         clinical = self._decode_cytogen(clinical)
-        molecular = self._decode_chromosomes(molecular)
+        molecular = self._decode_genes(molecular)
         df = self._aggregator(clinical, molecular)
         cat_cols, bin_cols, flt_cols = self._categorize(df)
         df, y, molecular = self._drop_nan_target(df, y, molecular)
@@ -418,7 +418,12 @@ class ImprovedDataHandler(DataHandler):
 
     def _decode_chromosomes(self,molecular_df:pd.DataFrame) -> pd.DataFrame:
 
-        mol_agg_gen = molecular_df.groupby("ID").agg(nb_mutations=("GENE", "count"))
+        mol_agg_gen = (
+            molecular_df
+            .groupby("ID")
+            .agg(
+                nb_mutations=("GENE", "count"))
+        )
         
         ID = molecular_df.index.tolist()
         CH=list(molecular_df["CHR"])
@@ -430,7 +435,33 @@ class ImprovedDataHandler(DataHandler):
             "VAF":VAF,
         })
 
-        result=df_chrom.pivot_table(index="ID", columns="Chromosomes",values="VAF",fill_value=0).reset_index()
+        result=df_chrom.pivot_table(index="ID", columns="Chromosomes",values="VAF", aggfunc="sum",fill_value=0).reset_index()
+
+        molecular_df=result.merge(mol_agg_gen,on="ID",how="inner")
+        molecular_df = molecular_df.set_index("ID")
+
+        return molecular_df
+    
+    def _decode_genes(self,molecular_df:pd.DataFrame) -> pd.DataFrame:
+
+        mol_agg_gen = (
+            molecular_df
+            .groupby("ID")
+            .agg(
+                nb_mutations=("GENE", "count"))
+        )
+        
+        ID = molecular_df.index.tolist()
+        GEN=list(molecular_df["GENE"])
+        VAF=list(molecular_df["VAF"])
+
+        df_chrom=pd.DataFrame({
+            "ID":ID,
+            "Genes":GEN,
+            "VAF":VAF,
+        })
+
+        result=df_chrom.pivot_table(index="ID", columns="Genes",values="VAF", aggfunc="sum",fill_value=0).reset_index()
 
         molecular_df=result.merge(mol_agg_gen,on="ID",how="inner")
         molecular_df = molecular_df.set_index("ID")
