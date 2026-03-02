@@ -4,11 +4,12 @@ from DataManagement import DataHandler, DefaultDataHandler, ImprovedDataHandler
 from ModelPipelines import DefaultPipeline
 from sksurv.util import Surv
 from config import PARAMS_RSF
-from sksurv.metrics import concordance_index_censored
+#from sksurv.metrics import concordance_index_censored
+from sksurv.metrics import concordance_index_ipcw
 import logging
 import os
 import numpy as np
-
+from LearningCurve import learning_curve_analysis
 
 # logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -37,9 +38,9 @@ class ModelSelection:
 
     def cindex_scorer(self, estimator, X, y):
         pred = estimator.predict(X)
-        event, time = y[y.dtype.names[0]], y[y.dtype.names[1]]
-        return concordance_index_censored(event, time, pred)[0]
-
+        #event, time = y[y.dtype.names[0]], y[y.dtype.names[1]]
+        #return concordance_index_censored(event, time, pred)[0]
+        return concordance_index_ipcw(y, y, pred, tau=7)[0]
 
     def fit(self, X, y):
 
@@ -140,4 +141,7 @@ if __name__ == "__main__":
     out_file = os.path.join(os.getcwd(), "submission_from_gridsearch.csv")
     grid_search.save_submission(X_test_aligned, out_path=out_file)
     print(f"Saved submission to {out_file}")
+
+    # --- Learning curve analysis ---
+    learning_curve_analysis(pipeline, prepared_data[0], y_surv)
 
