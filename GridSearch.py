@@ -4,12 +4,11 @@ from DataManagement import DataHandler, DefaultDataHandler, ImprovedDataHandler
 from ModelPipelines import DefaultPipeline
 from sksurv.util import Surv
 from config import PARAMS_RSF
-#from sksurv.metrics import concordance_index_censored
-from sksurv.metrics import concordance_index_ipcw
+from sksurv.metrics import concordance_index_ipcw,concordance_index_censored
 import logging
 import os
 import numpy as np
-from LearningCurve import learning_curve_analysis
+from LearningCurve import learning_curve_analysis, RiskScorePlotter
 
 # logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,9 +37,9 @@ class ModelSelection:
 
     def cindex_scorer(self, estimator, X, y):
         pred = estimator.predict(X)
-        #event, time = y[y.dtype.names[0]], y[y.dtype.names[1]]
-        #return concordance_index_censored(event, time, pred)[0]
-        return concordance_index_ipcw(y, y, pred, tau=7)[0]
+        event, time = y[y.dtype.names[0]], y[y.dtype.names[1]]
+        return concordance_index_censored(event, time, pred)[0]
+        #return concordance_index_ipcw(y, y, pred, tau=7)[0]
 
     def fit(self, X, y):
 
@@ -96,7 +95,7 @@ class ModelSelection:
         })
         
         sub_df.to_csv(out_path, index=False)
-        logging.info(f"Submission sauvegardée : {out_path}")
+        logging.info(f"Submission saved : {out_path}")
 
 
 if __name__ == "__main__":
@@ -144,4 +143,10 @@ if __name__ == "__main__":
 
     # --- Learning curve analysis ---
     learning_curve_analysis(pipeline, prepared_data[0], y_surv)
+    best_model=grid_search.best_model
+
+    plotter = RiskScorePlotter(model=best_model, X=prepared_data[0], y=y_surv)
+    plotter.plot_overall_distribution()
+    plotter.plot_by_event_status()
+    plotter.plot_kaplan_meier()
 
