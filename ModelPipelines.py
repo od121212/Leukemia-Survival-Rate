@@ -21,6 +21,51 @@ from sksurv.util import Surv
 # logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+class FeatureRatioCreator(BaseEstimator, TransformerMixin):
+    """
+    Create derived ratio features after imputation and preprocessing.
+    """
+
+    def __init__(self):
+        pass
+
+    def fit(self, X, y=None):
+        return self  # no fitting required
+
+    def transform(self, X, y=None):
+        X = X.copy()
+
+        # --- Ratios ---
+        if {"ANC", "WBC"}.issubset(X.columns):
+            X["anc_ratio"] = X["ANC"] / X["WBC"]
+
+        if {"MONOCYTES", "WBC"}.issubset(X.columns):
+            X["mono_ratio"] = X["MONOCYTES"] / X["WBC"]
+
+        if {"ANC", "MONOCYTES"}.issubset(X.columns):
+            X["anc_mono_ratio"] = X["ANC"] / X["MONOCYTES"]
+
+        if {"PLT", "WBC"}.issubset(X.columns):
+            X["plt_wbc_ratio"] = X["PLT"] / X["WBC"]
+
+        # --- Log transforms ---
+        if "WBC" in X.columns:
+            X["log_WBC"] = np.log1p(X["WBC"])
+
+        if "BM_BLAST" in X.columns:
+            X["log_BM_BLAST"] = np.log1p(X["BM_BLAST"])
+
+        # --- Interactions ---
+        if {"log_WBC", "BM_BLAST"}.issubset(X.columns):
+            X["blast_burden"] = X["log_WBC"] * (X["BM_BLAST"] / 100)
+
+        if {"BM_BLAST", "max_vaf"}.issubset(X.columns):
+            X["blast_clone_interaction"] = X["BM_BLAST"] * X["max_vaf"]
+
+        if {"cyto_complex", "nb_mutations"}.issubset(X.columns):
+            X["complex_mutation"] = (X["cyto_complex"].fillna(0) > 0).astype(int) * X["nb_mutations"]
+
+        return X
 
 # Missing Values Transformer
 class DropMissingTransformer(BaseEstimator, TransformerMixin):
@@ -116,6 +161,7 @@ class DefaultPipeline(ModelPipeline):
             ],
             remainder='passthrough'
         )
+        col_trans.set_output(transform="pandas")
 
         # === MODEL ===
 
@@ -131,6 +177,7 @@ class DefaultPipeline(ModelPipeline):
         return Pipeline([
             ("drop_missing", DropMissingTransformer(threshold=0.2)),
             ('column_transformer', col_trans),
+            ('feature_ratios', FeatureRatioCreator()),
             ('model', model)
         ])
     
