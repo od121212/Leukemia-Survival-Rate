@@ -388,6 +388,7 @@ class ImprovedDataHandler(DataHandler):
         clinical = self._decode_cytogen(clinical)
         molecular = self._decode_genes(molecular)
         df = self._aggregator(clinical, molecular)
+        df=self.create_ratio(df)
         cat_cols, bin_cols, flt_cols = self._categorize(df)
         df, y, molecular = self._drop_nan_target(df, y, molecular)
 
@@ -448,9 +449,15 @@ class ImprovedDataHandler(DataHandler):
             molecular_df
             .groupby("ID")
             .agg(
-                nb_mutations=("GENE", "count"))
+                nb_mutations=("GENE", "count"),
+                max_vaf=("VAF", "max"))
         )
         
+        high_impact_count = molecular_df[molecular_df["EFFECT"].isin(["stop_gained","frameshift","splice"])].groupby("ID")["GENE"].count()
+        mol_agg_gen["high_impact_mutations"] = high_impact_count
+        mol_agg_gen["high_impact_mutations"] = mol_agg_gen["high_impact_mutations"].fillna(0)
+
+
         ID = molecular_df.index.tolist()
         GEN=list(molecular_df["GENE"])
         VAF=list(molecular_df["VAF"])
@@ -468,6 +475,69 @@ class ImprovedDataHandler(DataHandler):
 
         return molecular_df
     
+    def create_ratio(self, df: pd.DataFrame):
+        # --- ANC / WBC ---
+        if {"ANC","WBC"}.issubset(df.columns):
+            df["anc_ratio"] = df["ANC"] / df["WBC"].replace(0, np.nan)
+        else:
+            df["anc_ratio"] = 0
+        df["anc_ratio"] = df["anc_ratio"].fillna(0)
+
+        # --- MONOCYTES / WBC ---
+        if {"MONOCYTES","WBC"}.issubset(df.columns):
+            df["mono_ratio"] = df["MONOCYTES"] / df["WBC"].replace(0, np.nan)
+        else:
+            df["mono_ratio"] = 0
+        df["mono_ratio"] = df["mono_ratio"].fillna(0)
+
+        # --- ANC / MONOCYTES ---
+        if {"ANC","MONOCYTES"}.issubset(df.columns):
+            df["anc_mono_ratio"] = df["ANC"] / df["MONOCYTES"].replace(0, np.nan)
+        else:
+            df["anc_mono_ratio"] = 0
+        df["anc_mono_ratio"] = df["anc_mono_ratio"].fillna(0)
+
+        # --- PLT / WBC ---
+        if {"PLT","WBC"}.issubset(df.columns):
+            df["plt_wbc_ratio"] = df["PLT"] / df["WBC"].replace(0, np.nan)
+        else:
+            df["plt_wbc_ratio"] = 0
+        df["plt_wbc_ratio"] = df["plt_wbc_ratio"].fillna(0)
+
+        # --- Log transforms ---
+        if "WBC" in df.columns:
+            df["log_WBC"] = np.log1p(df["WBC"])
+        else:
+            df["log_WBC"] = 0
+
+        if "BM_BLAST" in df.columns:
+            df["log_BM_BLAST"] = np.log1p(df["BM_BLAST"])
+        else:
+            df["log_BM_BLAST"] = 0
+
+        # --- Derived interactions ---
+        if {"log_WBC","BM_BLAST"}.issubset(df.columns):
+            df["blast_burden"] = df["log_WBC"] * (df["BM_BLAST"] / 100)
+        else:
+            df["blast_burden"] = 0
+
+        if {"BM_BLAST","max_vaf"}.issubset(df.columns):
+            df["blast_clone_interaction"] = df["BM_BLAST"] * df["max_vaf"]
+        else:
+            df["blast_clone_interaction"] = 0
+
+        # Drop max_vaf if it exists
+        if "max_vaf" in df.columns:
+            df = df.drop(["max_vaf"], axis=1)
+
+        # --- Complex mutation ---
+        if {"cyto_complex","nb_mutations"}.issubset(df.columns):
+            df["complex_mutation"] = (df["cyto_complex"].fillna(0) > 0).astype(int) * df["nb_mutations"]
+        else:
+            df["complex_mutation"] = 0
+
+        return df
+
     def _aggregator(self, clinical_df: pd.DataFrame, molecular_df: pd.DataFrame) -> pd.DataFrame:
         if molecular_df is None:
             return clinical_df.copy()

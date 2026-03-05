@@ -130,7 +130,7 @@ if __name__ == "__main__":
     except FileNotFoundError:
         maf_test = None
 
-    test_handler = DefaultDataHandler(clin_test, maf_test, None)
+    test_handler = ImprovedDataHandler(clin_test, maf_test, None)
     test_prepared = test_handler.prepare()
     X_test_prepared = test_prepared[0]
 
