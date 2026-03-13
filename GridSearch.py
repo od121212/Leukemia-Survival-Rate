@@ -1,9 +1,9 @@
 from sklearn.model_selection import GridSearchCV
 import pandas as pd
 from DataManagement import DataHandler, DefaultDataHandler, ImprovedDataHandler
-from ModelPipelines import DefaultPipeline
+from ModelPipelines import DefaultPipeline, XGBoostSurvivalPipeline
 from sksurv.util import Surv
-from config import PARAMS_RSF
+from config import PARAMS_RSF, PARAMS_XGB
 from sksurv.metrics import concordance_index_ipcw,concordance_index_censored
 import logging
 import os
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     # Build and fit pipeline
     data_handler = ImprovedDataHandler(df, maf_df, target_df)
     prepared_data = data_handler.prepare()
-    pipeline_builder = DefaultPipeline(prepared_data)
+    pipeline_builder = XGBoostSurvivalPipeline(prepared_data)
     pipeline = pipeline_builder.build_pipeline()
     # Save training columns to align test set
     train_cols = prepared_data[0].columns.tolist()
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         data=prepared_data[1]
     )
 
-    grid_search = ModelSelection(model=pipeline, param_grid=PARAMS_RSF, cv=5)
+    grid_search = ModelSelection(model=pipeline, param_grid=PARAMS_XGB, cv=5)
     grid_search.fit(prepared_data[0], y_surv)
     print("Best Parameters:", grid_search.best_params())
     print("Best Score:", grid_search.best_score())
