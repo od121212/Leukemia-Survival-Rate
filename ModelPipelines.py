@@ -219,7 +219,7 @@ class XGBSurvivalWrapper(BaseEstimator, RegressorMixin):
         event = y[y.dtype.names[0]].astype(int)
         time = y[y.dtype.names[1]].astype(float)
 
-        self.model = XGBRegressor(
+        self.model_ = XGBRegressor(
 
             objective="survival:cox",
 
@@ -238,14 +238,14 @@ class XGBSurvivalWrapper(BaseEstimator, RegressorMixin):
             random_state=self.random_state
         )
 
-        self.model.fit(X, time, sample_weight=event)
+        self.model_.fit(X, time, sample_weight=event)
 
         return self
 
 
     def predict(self, X):
 
-        return self.model.predict(X)
+        return self.model_.predict(X)
 
 
 class XGBoostSurvivalPipeline(ModelPipeline):

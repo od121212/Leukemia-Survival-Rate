@@ -119,6 +119,7 @@ if __name__ == "__main__":
     )
 
     grid_search = ModelSelection(model=pipeline, param_grid=PARAMS_XGB, cv=5)
+    # grid_search = ModelSelection(model=pipeline, param_grid=PARAMS_RSF, cv=5)
     grid_search.fit(prepared_data[0], y_surv)
     print("Best Parameters:", grid_search.best_params())
     print("Best Score:", grid_search.best_score())
@@ -142,10 +143,15 @@ if __name__ == "__main__":
     print(f"Saved submission to {out_file}")
 
     # --- Learning curve analysis ---
-    learning_curve_analysis(pipeline, prepared_data[0], y_surv)
+    learning_curve_analysis(pipeline, prepared_data[0], y_surv, PARAMS_XGB)
+    # learning_curve_analysis(pipeline, prepared_data[0], y_surv, PARAMS_RSF)
+
     best_model=grid_search.best_model
 
+    print("Loading Scores...")
+
     plotter = RiskScorePlotter(model=best_model, X=prepared_data[0], y=y_surv)
+    print("Done.")
     plotter.plot_overall_distribution()
     plotter.plot_by_event_status()
     plotter.plot_kaplan_meier()
