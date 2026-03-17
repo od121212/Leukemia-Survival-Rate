@@ -28,6 +28,14 @@ class FeatureRatioCreator(BaseEstimator, TransformerMixin):
     """
     Create derived ratio features after imputation and preprocessing.
     """
+    # ANC/WBC: fraction of neutrophils over the total count of white blood cells. functional immune capacity vs leukemia burden
+    # Monocytes/WBC: proportion of monocytes, allowing to detect myelomonocytic disease patterns.
+    # ANC/monocytes: Balance between two myeloid lineages, is it normal marrow recovery or AML with monocytic differenciation
+    # PLT/WBC: in agressive leukemias, less platelets more WBC. marrow failure vs leukemic expansion
+    # log transforms because blood values are highly skewed, so this stabilises variance and improve performance.
+    # blast burden: total leukemic cell load in proxy
+    # blast clone: product of tumor burden and max vaf (clonal dominance). estimates whether it's one dominant clone that expands or many subclones. dominant clone expansion.
+
 
     def __init__(self):
         pass
