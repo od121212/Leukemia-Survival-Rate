@@ -522,8 +522,8 @@ class ImprovedDataHandler(DataHandler):
 
 # %%%%%%%%%%%%% === MAIN === %%%%%%%%%%%%%
 if __name__ == "__main__":
-    df = pd.read_csv("./X_train/clinical_train.csv", index_col=0)
-    maf_df = pd.read_csv("./X_train/molecular_train.csv", index_col=0)
-    target_df = pd.read_csv("./target_train.csv", index_col=0)
+    df = pd.read_csv("./data/raw/X_train/clinical_train.csv", index_col=0)
+    maf_df = pd.read_csv("./data/raw/X_train/molecular_train.csv", index_col=0)
+    target_df = pd.read_csv("./data/raw/target_train.csv", index_col=0)
     dtm = DataViewer(df, target_df)
     print(dtm.stats_analysis())

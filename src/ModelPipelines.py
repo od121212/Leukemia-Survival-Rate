@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from sklearn.ensemble import  RandomForestClassifier
 from sklearn.metrics import classification_report, roc_auc_score
 import logging
-from DataManagement import DataHandler, DefaultDataHandler
+from src.DataManagement import DataHandler, DefaultDataHandler
 from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv
 from xgboost import XGBRegressor
@@ -311,9 +311,9 @@ class XGBoostSurvivalPipeline(ModelPipeline):
 if __name__ == "__main__":
 
     # Load data
-    df = pd.read_csv("./X_train/clinical_train.csv", index_col=0)
-    maf_df = pd.read_csv("./X_train/molecular_train.csv", index_col=0)
-    target_df = pd.read_csv("./target_train.csv", index_col=0)
+    df = pd.read_csv("./data/raw/X_train/clinical_train.csv", index_col=0)
+    maf_df = pd.read_csv("./data/raw/X_train/molecular_train.csv", index_col=0)
+    target_df = pd.read_csv("./data/raw/target_train.csv", index_col=0)
 
     # Build and fit pipeline
     data_handler = DefaultDataHandler(df, maf_df, target_df)

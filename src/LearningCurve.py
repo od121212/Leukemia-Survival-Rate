@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
 import logging
-from ModelPipelines import ModelPipeline
+from src.ModelPipelines import ModelPipeline
 from sklearn.model_selection import learning_curve,train_test_split, GridSearchCV
 from sklearn.metrics import make_scorer
 from sksurv.util import Surv
 from sksurv.metrics import concordance_index_censored
-from config import PARAMS_RSF, PARAMS_XGB
+from src.config import PARAMS_RSF, PARAMS_XGB
 from lifelines import KaplanMeierFitter
 
 # logging configuration

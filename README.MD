@@ -6,6 +6,46 @@ The challenge lies in integrating heterogeneous data sources to build robust, in
 
 ---
 
+## 📁 Project Structure
+
+```
+Leukemia-Survival-Rate/
+├── src/                          # Source code
+│   ├── config.py                 # Hyperparameter grids (RSF, XGBoost)
+│   ├── DataManagement.py         # Data loading, preprocessing & EDA classes
+│   ├── ModelPipelines.py         # sklearn Pipeline builders
+│   ├── GridSearch.py             # Model selection & submission generation
+│   └── LearningCurve.py          # Learning curve & risk score analysis
+│
+├── data/
+│   ├── raw/                      # Input data (do not modify)
+│   │   ├── X_train/
+│   │   │   ├── clinical_train.csv
+│   │   │   └── molecular_train.csv
+│   │   ├── X_test/
+│   │   │   ├── clinical_test.csv
+│   │   │   └── molecular_test.csv
+│   │   └── target_train.csv
+│   └── submissions/              # Generated submission files
+│       ├── submission_from_gridsearch.csv
+│       └── random_submission_FRacdcw_v9kP4pP.csv
+│
+├── notebooks/                    # Exploratory & benchmark notebooks
+│   ├── Sandbox.ipynb
+│   └── Benchmark_nqBJ7fO.ipynb
+│
+├── docs/                         # Reference documents
+│   └── Random Number Generation.pdf
+│
+├── requirements.txt
+├── .gitignore
+└── README.MD
+```
+
+> **Note**: All scripts must be run from the **project root** so that `src.*` imports and `./data/raw/` paths resolve correctly.
+
+---
+
 ## 📊 1. Data Understanding
 
 A key difficulty of this dataset is the **structural mismatch between data sources**:
@@ -77,7 +117,7 @@ To prepare the data for machine learning, several transformations were applied:
 - Aggregated mutations using the **maximum VAF per gene**, capturing the strongest clonal signal
 
 ### 📐 Statistical Management
-A custom `dtmanager` class was developed to:
+A custom `DataViewer` class was developed to:
 
 - Analyze variable distributions using **Jarque–Bera normality tests**
 - Detect missing values (NaNs) and recommend **mean vs. median imputation**
@@ -100,34 +140,29 @@ Key insights from exploratory analysis include:
 
 - **Non-Normal Distributions**  
   Most blood parameters (e.g., WBC, PLT) are highly skewed.  
-  Statistical tests suggest applying logarithmic transformations:  
-  \[
-  \log(x + 1)
-  \]
+  Statistical tests suggest applying logarithmic transformations.
 
 - **Survival Patterns**  
   Scatterplots and violin plots were used to visualize relationships between biomarkers and survival outcomes.
 
 ---
 
-## 🚀 Next Steps
+## 🚀 Quick Start
 
-Planned improvements and modeling steps:
+Run from the **project root**:
 
-- [ ] **Data Imputation**  
-  Handle missing values using distribution-aware strategies.
+```python
+# Example: train and generate a submission
+python -m src.GridSearch
+```
 
-- [ ] **Categorical Encoding**  
-  Encode textual variables (`CENTER`, `CYTOGENETICS`) using One-Hot or Label Encoding.
+Or import modules directly:
 
-- [ ] **Modeling**  
-  Train robust tree-based models:
-  - Random Forest
-  - XGBoost
-  - LightGBM
-
-- [ ] **Cross-Validation**  
-  Apply stratified cross-validation to address class imbalance in `OS_STATUS`.
+```python
+from src.DataManagement import DefaultDataHandler, ImprovedDataHandler
+from src.ModelPipelines import XGBoostSurvivalPipeline
+from src.GridSearch import ModelSelection
+```
 
 ---
 

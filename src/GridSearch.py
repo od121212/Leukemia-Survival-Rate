@@ -1,14 +1,14 @@
 from sklearn.model_selection import GridSearchCV
 import pandas as pd
-from DataManagement import DataHandler, DefaultDataHandler, ImprovedDataHandler
-from ModelPipelines import DefaultPipeline, XGBoostSurvivalPipeline
+from src.DataManagement import DataHandler, DefaultDataHandler, ImprovedDataHandler
+from src.ModelPipelines import DefaultPipeline, XGBoostSurvivalPipeline
 from sksurv.util import Surv
-from config import PARAMS_RSF, PARAMS_XGB
+from src.config import PARAMS_RSF, PARAMS_XGB
 from sksurv.metrics import concordance_index_ipcw,concordance_index_censored
 import logging
 import os
 import numpy as np
-from LearningCurve import learning_curve_analysis, RiskScorePlotter
+from src.LearningCurve import learning_curve_analysis, RiskScorePlotter
 
 # logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -100,9 +100,9 @@ class ModelSelection:
 
 if __name__ == "__main__":
     # Load data
-    df = pd.read_csv("./X_train/clinical_train.csv", index_col=0)
-    maf_df = pd.read_csv("./X_train/molecular_train.csv", index_col=0)
-    target_df = pd.read_csv("./target_train.csv", index_col=0)
+    df = pd.read_csv("./data/raw/X_train/clinical_train.csv", index_col=0)
+    maf_df = pd.read_csv("./data/raw/X_train/molecular_train.csv", index_col=0)
+    target_df = pd.read_csv("./data/raw/target_train.csv", index_col=0)
 
     # Build and fit pipeline
     data_handler = ImprovedDataHandler(df, maf_df, target_df)
@@ -125,9 +125,9 @@ if __name__ == "__main__":
     print("Best Score:", grid_search.best_score())
 
     # --- Generate submission on test set (align columns with training) ---
-    clin_test = pd.read_csv("./X_test/clinical_test.csv", index_col=0)
+    clin_test = pd.read_csv("./data/raw/X_test/clinical_test.csv", index_col=0)
     try:
-        maf_test = pd.read_csv("./X_test/molecular_test.csv", index_col=0)
+        maf_test = pd.read_csv("./data/raw/X_test/molecular_test.csv", index_col=0)
     except FileNotFoundError:
         maf_test = None
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     # align test columns to training columns (adds missing columns as NaN, drops extras)
     X_test_aligned = X_test_prepared.reindex(columns=train_cols)
 
-    out_file = os.path.join(os.getcwd(), "submission_from_gridsearch.csv")
+    out_file = os.path.join(os.getcwd(), "data", "submissions", "submission_from_gridsearch.csv")
     grid_search.save_submission(X_test_aligned, out_path=out_file)
     print(f"Saved submission to {out_file}")
 
