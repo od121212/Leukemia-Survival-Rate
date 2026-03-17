@@ -397,6 +397,17 @@ class ImprovedDataHandler(DataHandler):
     def _decode_cytogen(self, clinical_df: pd.DataFrame) -> pd.DataFrame:
         cyto = clinical_df['CYTOGENETICS']
 
+         # function that interprets the results of caryotipic analysis of the patients.
+        # this has an impact on their prognosis
+        # normal: don't have visible abnormalities
+        # complex: genomic instability, treated more aggressively
+        # monosomy 7: loss of a chromosome in the 7th pair, affecting genes involved in hematopoeiosis: poor prognosis
+        # trisomy 8: extra copy of chromosome in the 8th pair
+        # del 5q: loss of the long arm of chromosome 5, patients respond well to a treatment (lenalidomide)
+        # t_3_3: translocation between chromosome 3 regions, agressive disease and poor prognosis
+        # number of abnormalities: approximates complexity of cytogenetics (worse prognosis)
+        # mosaic: multiple cell population, indicates clonal heterogeneity, helps understand tumor evolution and treatment resistance
+
         cyto = (
             cyto.str.lower()
                 .str.replace(r'\[.*?\]', '', regex=True)
@@ -417,6 +428,10 @@ class ImprovedDataHandler(DataHandler):
         return clinical_df
 
     def _decode_chromosomes(self,molecular_df:pd.DataFrame) -> pd.DataFrame:
+
+        # function that, for each patient, aggregates the number of genetic mutation he has
+        # and for each chromosome pair, a 0 if it's not mutated and the sum of the VAFs associated if it is
+        # like a one hot encoder but with VAFs information instead of a pure binary information (0/1)
 
         mol_agg_gen = (
             molecular_df
@@ -443,6 +458,15 @@ class ImprovedDataHandler(DataHandler):
         return molecular_df
     
     def _decode_genes(self,molecular_df:pd.DataFrame) -> pd.DataFrame:
+
+        # function that, for each patient, aggregates the number of genetic mutation he has
+        # and for each potential gene amongst the list of all mutated genes inside the training sample, a 0 if it's not mutated and the sum of the VAFs associated if it is
+        # like a one hot encoder but with VAFs information instead of a pure binary information (0/1)
+        # it also adds information about the impact of the mutations: if it contains "stop gained", "frameshift" or "splice", they are considered as high impact mutations
+        # "stop gained": there's a premature stop, the gene often loses its function in its entirety (often affects genes suppressing tumors, allowing proliferation of cancerous cells)
+        # "frameshift": non functional protein (often impacts genes controlling DNA repair)
+        # "splice": affects RNA, changing how cells are processed.
+        # here, we count the number of high impact mutations a patient has
 
         mol_agg_gen = (
             molecular_df
