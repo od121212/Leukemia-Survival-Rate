@@ -16,6 +16,9 @@ import logging
 from DataManagement import DataHandler, DefaultDataHandler
 from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv
+from xgboost import XGBRegressor
+from sklearn.base import BaseEstimator, RegressorMixin
+
 
 
 # logging configuration
@@ -184,6 +187,126 @@ class DefaultPipeline(ModelPipeline):
 
 
 
+
+class XGBSurvivalWrapper(BaseEstimator, RegressorMixin):
+
+    def __init__(
+        self,
+        n_estimators=500,
+        max_depth=4,
+        learning_rate=0.03,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        reg_lambda=1.0,
+        reg_alpha=0.0,
+        random_state=42
+    ):
+
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.learning_rate = learning_rate
+        self.subsample = subsample
+        self.colsample_bytree = colsample_bytree
+        self.reg_lambda = reg_lambda
+        self.reg_alpha = reg_alpha
+        self.random_state = random_state
+
+        self.model = None
+
+
+    def fit(self, X, y):
+
+        event = y[y.dtype.names[0]].astype(int)
+        time = y[y.dtype.names[1]].astype(float)
+
+        self.model_ = XGBRegressor(
+
+            objective="survival:cox",
+
+            n_estimators=self.n_estimators,
+            max_depth=self.max_depth,
+            learning_rate=self.learning_rate,
+
+            subsample=self.subsample,
+            colsample_bytree=self.colsample_bytree,
+
+            reg_lambda=self.reg_lambda,
+            reg_alpha=self.reg_alpha,
+
+            tree_method="hist",
+            n_jobs=-1,
+            random_state=self.random_state
+        )
+
+        self.model_.fit(X, time, sample_weight=event)
+
+        return self
+
+
+    def predict(self, X):
+
+        return self.model_.predict(X)
+
+
+class XGBoostSurvivalPipeline(ModelPipeline):
+
+    def __init__(
+        self,
+        prep_: tuple[pd.DataFrame, pd.DataFrame, list, list, list],
+        *args
+    ):
+        super().__init__(*args)
+        self.prepared_data = prep_
+
+    def build_pipeline(self) -> Pipeline:
+
+        X, y, float_cols, categorical_cols, binary_cols = self.prepared_data
+
+        float_pipe = Pipeline([
+            ("impute_num", SimpleImputer(strategy="median"))
+        ])
+
+        multi_cat_pipe = Pipeline([
+            ("encoder", OneHotEncoder(
+                handle_unknown="ignore",
+                sparse_output=False
+            )),
+            ("impute_cat", KNNImputer(
+                n_neighbors=5,
+                weights="distance"
+            ))
+        ])
+
+        binary_pipe = Pipeline([
+            ("impute_cat", KNNImputer(
+                n_neighbors=5,
+                weights="distance"
+            ))
+        ])
+
+        col_trans = ColumnTransformer(
+            transformers=[
+                ("num", float_pipe, float_cols),
+                ("cat", multi_cat_pipe, categorical_cols),
+                ("binary_cat", binary_pipe, binary_cols)
+            ],
+            remainder="passthrough"
+        )
+
+        col_trans.set_output(transform="pandas")
+
+        model = XGBSurvivalWrapper()
+
+        return Pipeline([
+            ("drop_missing", DropMissingTransformer(threshold=0.2)),
+            ("column_transformer", col_trans),
+            ("feature_ratios", FeatureRatioCreator()),
+            ("model", model)
+        ])
+
+
+
+
 # %%%%%%%%%%%%% === MAIN TEST === %%%%%%%%%%%%%
 if __name__ == "__main__":
 
@@ -195,7 +318,7 @@ if __name__ == "__main__":
     # Build and fit pipeline
     data_handler = DefaultDataHandler(df, maf_df, target_df)
     prepared_data = data_handler.prepare()
-    pipeline_builder = DefaultPipeline(prepared_data)
+    pipeline_builder = XGBoostSurvivalPipeline(prepared_data)
     pipeline = pipeline_builder.build_pipeline()
 
 

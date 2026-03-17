@@ -3,13 +3,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
-
+import logging
+from ModelPipelines import ModelPipeline
 from sklearn.model_selection import learning_curve,train_test_split, GridSearchCV
 from sklearn.metrics import make_scorer
 from sksurv.util import Surv
 from sksurv.metrics import concordance_index_censored
-from config import PARAMS_RSF
+from config import PARAMS_RSF, PARAMS_XGB
 from lifelines import KaplanMeierFitter
+
+# logging configuration
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 def cindex_score(y_true, risk_scores):
     return concordance_index_censored(
@@ -18,7 +23,8 @@ def cindex_score(y_true, risk_scores):
         risk_scores
     )[0]
 
-def learning_curve_analysis(pipeline,X,y,param_grid=PARAMS_RSF):
+
+def learning_curve_analysis(pipeline:ModelPipeline, X:np.array, y:np.array, param_grid:dict)->None:
 
     cindex_scorer = make_scorer(cindex_score, greater_is_better=True)
 
@@ -39,7 +45,11 @@ def learning_curve_analysis(pipeline,X,y,param_grid=PARAMS_RSF):
     train_scores = []
     val_scores = []
 
+    logging.info("Start looping ...")
+
     for frac in train_sizes:
+
+        logging.info(f"Iteration : {frac}")
 
         X_sub, _, y_sub, _ = train_test_split(
             X,
