@@ -18,7 +18,7 @@ class DataViewer:
         self.df = df
         self.y = target
         self.float_cols = self.df.select_dtypes(include=['float64']).columns
-        self.categorical_cols = self.df.select_dtypes(include=['str']).columns
+        self.categorical_cols = self.df.select_dtypes(include=['object']).columns
     
     
     def stats_analysis(self)->pd.DataFrame:
