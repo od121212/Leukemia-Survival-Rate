@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from sklearn.ensemble import  RandomForestClassifier
 from sklearn.metrics import classification_report, roc_auc_score
 import logging
-from src.DataManagement import DataHandler, DefaultDataHandler
+from DataManagement import DataHandler, DefaultDataHandler
 from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv
 from xgboost import XGBRegressor
@@ -107,20 +107,23 @@ class ModelPipeline(ABC):
         pass
 #------------------------------
 
-#-------------- Pipeline Factory (Not Very usefull for now) ----------------
+#-------------- Pipeline Factory ----------------
 class PipelineFactory:
 
     @staticmethod
-    def get_pipeline(model_type: str) -> ModelPipeline:
-        if model_type == 'neural_network':
-            pass
-        elif model_type == 'linear_regression':
-            pass
+    def get_pipeline(model_type: str, prepared_data: tuple, **kwargs) -> ModelPipeline:
+        """
+        Factory method to return the appropriate pipeline based on model type.
+        Supports 'xgboost' (or 'xgb') and 'rsf' (or 'randomsurvivalforest').
+        """
+        model_type = model_type.lower()
+        if model_type in ['xgboost', 'xgb']:
+            return XGBoostSurvivalPipeline(prepared_data, **kwargs)
+        elif model_type in ['rsf', 'randomsurvivalforest', 'random_survival_forest']:
+            return DefaultPipeline(prepared_data, **kwargs)
         else:
-            return DefaultPipeline()  # Return a default pipeline for unknown types
+            raise ValueError(f"Unknown model_type for survival analysis: {model_type}")
 #------------------------------
-        
-
 
 class DefaultPipeline(ModelPipeline):
 
@@ -224,8 +227,11 @@ class XGBSurvivalWrapper(BaseEstimator, RegressorMixin):
 
     def fit(self, X, y):
 
-        event = y[y.dtype.names[0]].astype(int)
+        event = y[y.dtype.names[0]].astype(bool)
         time = y[y.dtype.names[1]].astype(float)
+
+        # For XGBoost survival:cox, right-censored instances must have negative time values
+        y_xgb = np.where(event, time, -time)
 
         self.model_ = XGBRegressor(
 
@@ -246,7 +252,7 @@ class XGBSurvivalWrapper(BaseEstimator, RegressorMixin):
             random_state=self.random_state
         )
 
-        self.model_.fit(X, time, sample_weight=event)
+        self.model_.fit(X, y_xgb)
 
         return self
 
@@ -317,28 +323,40 @@ class XGBoostSurvivalPipeline(ModelPipeline):
 
 # %%%%%%%%%%%%% === MAIN TEST === %%%%%%%%%%%%%
 if __name__ == "__main__":
+    from pathlib import Path
+    import sys
+    
+    # Path setup to ensure it runs independently
+    project_root = Path(__file__).resolve().parent.parent
+    data_dir = project_root / "data" / "raw"
 
     # Load data
-    df = pd.read_csv("./data/raw/X_train/clinical_train.csv", index_col=0)
-    maf_df = pd.read_csv("./data/raw/X_train/molecular_train.csv", index_col=0)
-    target_df = pd.read_csv("./data/raw/target_train.csv", index_col=0)
+    df = pd.read_csv(data_dir / "X_train" / "clinical_train.csv", index_col=0)
+    maf_df = pd.read_csv(data_dir / "X_train" / "molecular_train.csv", index_col=0)
+    target_df = pd.read_csv(data_dir / "target_train.csv", index_col=0)
 
-    # Build and fit pipeline
+    # Prepare data
     data_handler = DefaultDataHandler(df, maf_df, target_df)
     prepared_data = data_handler.prepare()
-    pipeline_builder = XGBoostSurvivalPipeline(prepared_data)
-    pipeline = pipeline_builder.build_pipeline()
-
 
     y_surv = Surv.from_dataframe(
         event='OS_STATUS',   # 1 = event, 0 = censored
         time='OS_YEARS',
         data=prepared_data[1]
     )
-
-    pipeline.fit(prepared_data[0], y_surv)
-
-    transformed_data = pipeline[:-1].transform(prepared_data[0])
-    print(transformed_data.shape)
     
-
+    print("Testing XGBoost Pipeline...")
+    xgb_pipeline_builder = PipelineFactory.get_pipeline("xgb", prepared_data)
+    xgb_pipeline = xgb_pipeline_builder.build_pipeline()
+    xgb_pipeline.fit(prepared_data[0], y_surv)
+    predictions_xgb = xgb_pipeline.predict(prepared_data[0])
+    print(f"XGBoost initial predictions sample: {predictions_xgb[:5]}")
+    
+    print("\nTesting Random Survival Forest Pipeline...")
+    rsf_pipeline_builder = PipelineFactory.get_pipeline("rsf", prepared_data)
+    rsf_pipeline = rsf_pipeline_builder.build_pipeline()
+    rsf_pipeline.fit(prepared_data[0], y_surv)
+    predictions_rsf = rsf_pipeline.predict(prepared_data[0])
+    print(f"RSF initial predictions sample: {predictions_rsf[:5]}")
+    
+    print("\nBoth pipelines working correctly!")

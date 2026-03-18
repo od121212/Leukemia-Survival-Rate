@@ -7,16 +7,16 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.append(str(project_root / "src"))
 
-from DataManagement import DataHandler, DefaultDataHandler, ImprovedDataHandler
-from ModelPipelines import DefaultPipeline, XGBoostSurvivalPipeline
+from DataManagement import DataHandler, DefaultDataHandler, ImprovedDataHandler # type: ignore
+from ModelPipelines import DefaultPipeline, XGBoostSurvivalPipeline # type: ignore
 from sksurv.util import Surv
-from config import PARAMS_RSF, PARAMS_XGB
+from config import PARAMS_RSF, PARAMS_XGB # type: ignore
 from sksurv.metrics import concordance_index_ipcw,concordance_index_censored
 import logging
 import os
 import numpy as np
-from LearningCurve import learning_curve_analysis, RiskScorePlotter
-from GridSearch import ModelSelection
+from LearningCurve import learning_curve_analysis, RiskScorePlotter # type: ignore
+from GridSearch import ModelSelection # type: ignore
 
 if __name__ == "__main__":
 

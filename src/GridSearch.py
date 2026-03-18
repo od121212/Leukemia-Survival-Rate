@@ -1,14 +1,14 @@
 from sklearn.model_selection import GridSearchCV
 import pandas as pd
-from src.DataManagement import DataHandler, DefaultDataHandler, ImprovedDataHandler
-from src.ModelPipelines import DefaultPipeline, XGBoostSurvivalPipeline
+from DataManagement import DataHandler, DefaultDataHandler, ImprovedDataHandler
+from ModelPipelines import DefaultPipeline, XGBoostSurvivalPipeline
 from sksurv.util import Surv
-from src.config import PARAMS_RSF, PARAMS_XGB
+from config import PARAMS_RSF, PARAMS_XGB
 from sksurv.metrics import concordance_index_ipcw,concordance_index_censored
 import logging
 import os
 import numpy as np
-from src.LearningCurve import learning_curve_analysis, RiskScorePlotter
+from LearningCurve import learning_curve_analysis, RiskScorePlotter
 
 # logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
