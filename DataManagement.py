@@ -133,7 +133,7 @@ class DataViewer:
                 continue
 
             plt.figure(figsize=(max(12, len(temp_df[col].unique()) * 0.25), 6))
-
+            temp_df = temp_df.reset_index(drop=True)
             sns.boxplot(
                 data=temp_df,
                 x=col,
